@@ -11,5 +11,8 @@ class EventBus:
     def publish(self, event):
         handlers = self.handlers.get(event.type, [])
 
+        if not handlers:
+            return
+
         for handler in handlers:
             handler(event)

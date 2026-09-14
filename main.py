@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from core.logger import logger
-from core.events import Event
+from core.events import Event, EventTypes
 from core.event_bus import EventBus
 
 
@@ -14,10 +14,10 @@ def main():
 
     event_bus = EventBus()
 
-    event_bus.subscribe("USER_RETURNED", handle_user_returned)
+    event_bus.subscribe(EventTypes.USER_RETURNED, handle_user_returned)
 
     event = Event(
-        type="USER_RETURNED",
+        type=EventTypes.USER_RETURNED,
         data={},
         timestamp=datetime.now(),
     )
