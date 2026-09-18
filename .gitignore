@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 logs/*
+data/identity/samples/
+data/identity/lbph.yml
