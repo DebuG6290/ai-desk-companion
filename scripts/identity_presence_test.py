@@ -36,6 +36,14 @@ def main():
         print(f"    data: {event.data}")
         print()
 
+    def on_curiosity(event):
+        print()
+        print(">>> EVENT: CURIOSITY_TRIGGERED")
+        print(f"    data: {event.data}")
+        print()
+        print("    Deskbot is curious... 👀")
+        print()
+
     def on_user_left(event):
         print()
         print(">>> EVENT: USER_LEFT")
@@ -52,6 +60,11 @@ def main():
     )
 
     event_bus.subscribe(
+        EventTypes.CURIOSITY_TRIGGERED,
+        on_curiosity,
+    )
+
+    event_bus.subscribe(
         EventTypes.USER_LEFT,
         on_user_left,
     )
@@ -60,7 +73,7 @@ def main():
 
     print()
     print("==============================")
-    print("Deskbot Identity Integration")
+    print("Deskbot Identity + Curiosity")
     print("==============================")
     print()
     print("Press Ctrl+C to stop.")
@@ -102,7 +115,7 @@ def main():
 
     except KeyboardInterrupt:
         print()
-        print("Stopping Deskbot identity test...")
+        print("Stopping Deskbot...")
 
     finally:
         camera.stop()

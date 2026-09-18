@@ -5,6 +5,7 @@ import cv2
 from core.events import Event, EventTypes
 from core.identity import FaceRecognizer, IdentitySmoother
 from core.presence import PresenceManager, PresenceState
+from core.curiosity import CuriosityManager
 
 
 class IdentityPresenceManager:
@@ -29,6 +30,11 @@ class IdentityPresenceManager:
         self.presence_manager = PresenceManager(
             required_present_frames=present_required_frames,
             required_absent_frames=absent_required_frames,
+        )
+
+        self.curiosity_manager = CuriosityManager(
+            curiosity_delay=5.0,
+            cooldown=30.0,
         )
 
         self.last_identity = "UNKNOWN"
@@ -68,6 +74,7 @@ class IdentityPresenceManager:
 
         if presence_event == "PERSON_ABSENT":
             self.identity_smoother.reset()
+            self.curiosity_manager.reset()
             self.last_identity = "UNKNOWN"
 
             self.event_bus.publish(
@@ -114,6 +121,23 @@ class IdentityPresenceManager:
             prediction["identity"]
         )
 
+        # Curiosity is evaluated only after identity smoothing.
+        curiosity_triggered = self.curiosity_manager.update(
+            identity
+        )
+
+        if curiosity_triggered:
+            self.event_bus.publish(
+                Event(
+                    type=EventTypes.CURIOSITY_TRIGGERED,
+                    data={
+                        "identity": identity,
+                        "distance": prediction["confidence"],
+                    },
+                    timestamp=datetime.now(),
+                )
+            )
+
         identity_changed = (
             identity != self.last_identity
         )
@@ -147,4 +171,5 @@ class IdentityPresenceManager:
             "identity": identity,
             "distance": prediction["confidence"],
             "event": event_type or presence_event,
+            "curiosity_triggered": curiosity_triggered,
         }
