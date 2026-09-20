@@ -108,3 +108,40 @@ def test_llm_pipeline_reacts_to_text_received():
     assert len(received) == 1
     assert received[0].type == EventTypes.TEXT_RESPONSE
     assert received[0].data["text"] == "Yes, I heard you."
+
+def test_llm_pipeline_preserves_conversation():
+    llm = FakeLLM(
+        text="I remember that."
+    )
+
+    pipeline = LLMPipeline(
+        llm=llm,
+    )
+
+    pipeline.process(
+        "I have an exam tomorrow."
+    )
+
+    pipeline.process(
+        "I am nervous."
+    )
+
+    messages = pipeline.conversation.get_messages()
+
+    assert messages[0]["role"] == "system"
+
+    assert messages[1]["content"] == (
+        "I have an exam tomorrow."
+    )
+
+    assert messages[2]["content"] == (
+        "I remember that."
+    )
+
+    assert messages[3]["content"] == (
+        "I am nervous."
+    )
+
+    assert messages[4]["content"] == (
+        "I remember that."
+    )

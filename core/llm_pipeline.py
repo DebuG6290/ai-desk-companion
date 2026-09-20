@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from core.events import Event, EventTypes
+from core.conversation import ConversationManager
 
 
 class LLMPipeline:
@@ -8,9 +9,15 @@ class LLMPipeline:
         self,
         llm,
         event_bus=None,
+        conversation_manager=None,
     ):
         self.llm = llm
         self.event_bus = event_bus
+
+        self.conversation = (
+            conversation_manager
+            or ConversationManager()
+        )
 
         if self.event_bus is not None:
             self.event_bus.subscribe(
@@ -30,21 +37,30 @@ class LLMPipeline:
         if not text:
             return None
 
-        messages = [
-            {
-                "role": "user",
-                "content": text,
-            }
-        ]
+        self.conversation.add_user_message(
+            text
+        )
 
-        response = self.llm.generate(messages)
+        messages = (
+            self.conversation.get_messages()
+        )
+
+        response = self.llm.generate(
+            messages
+        )
+
+        response_text = response["text"]
+
+        self.conversation.add_assistant_message(
+            response_text
+        )
 
         if self.event_bus is not None:
             self.event_bus.publish(
                 Event(
                     type=EventTypes.TEXT_RESPONSE,
                     data={
-                        "text": response["text"],
+                        "text": response_text,
                     },
                     timestamp=datetime.now(),
                 )
