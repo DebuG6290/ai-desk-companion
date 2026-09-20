@@ -124,17 +124,33 @@ class PipeWireAudioInput(AudioInput):
         if not self.started:
             return
 
-        if self.process is not None:
-            self.process.terminate()
+        process = self.process
+
+        if process is None:
+            self.started = False
+            return
+
+        try:
+            process.terminate()
 
             try:
-                self.process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait()
+                process.wait(timeout=0.5)
 
-        self.process = None
-        self.started = False
+            except subprocess.TimeoutExpired:
+                process.kill()
+
+                try:
+                    process.wait(timeout=0.5)
+
+                except subprocess.TimeoutExpired:
+                    pass
+
+        finally:
+            if process.stdout is not None:
+                process.stdout.close()
+
+            self.process = None
+            self.started = False
 
 
 def generate_sine_amplitude(

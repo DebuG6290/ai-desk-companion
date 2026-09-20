@@ -3,11 +3,14 @@ import os
 from dotenv import load_dotenv
 
 from core.audio import PipeWireAudioInput
+from core.audio_output import PipeWireAudioOutput
 from core.audio_pipeline import AudioPipeline
 from core.event_bus import EventBus
 from core.events import EventTypes
 from core.llm import SarvamLLM
 from core.llm_pipeline import LLMPipeline
+from core.tts import SarvamTextToSpeech
+from core.tts_pipeline import TTSPipeline
 from core.voice import SarvamSpeechToText
 from core.voice_pipeline import VoicePipeline
 
@@ -19,9 +22,7 @@ def main():
     api_key = os.getenv("SARVAM_API_KEY")
 
     if not api_key:
-        raise RuntimeError(
-            "SARVAM_API_KEY is not set"
-        )
+        raise RuntimeError("SARVAM_API_KEY is not set")
 
     event_bus = EventBus()
 
@@ -70,6 +71,27 @@ def main():
     )
 
     # -------------------------
+    # TTS
+    # -------------------------
+
+    tts = SarvamTextToSpeech(
+        api_key=api_key,
+        model="bulbul:v3",
+        speaker="shubh",
+        language_code="en-IN",
+        pace=1.0,
+        speech_sample_rate=24000,
+    )
+
+    audio_output = PipeWireAudioOutput()
+
+    TTSPipeline(
+        tts=tts,
+        audio_output=audio_output,
+        event_bus=event_bus,
+    )
+
+    # -------------------------
     # Events
     # -------------------------
 
@@ -82,9 +104,7 @@ def main():
         print("\n🛑 SPEECH ENDED")
         print("Sending audio to Sarvam STT...")
 
-        result = voice_pipeline.process(
-            segment
-        )
+        result = voice_pipeline.process(segment)
 
         print("\n🧠 TRANSCRIPT:")
         print(result["transcription"]["text"])
@@ -100,6 +120,7 @@ def main():
             "\n🤖 DESKBOT:",
             event.data["text"],
         )
+        print("🔊 Sending response to TTS...")
 
     event_bus.subscribe(
         EventTypes.SPEECH_STARTED,
@@ -125,6 +146,10 @@ def main():
     # Audio
     # -------------------------
 
+    # IMPORTANT:
+    # 89 is the known PipeWire source for
+    # the boAt Stone 350 Pro Plus microphone.
+
     audio = PipeWireAudioInput(
         target=89,
         sample_rate=16000,
@@ -137,15 +162,26 @@ def main():
         event_bus=event_bus,
     )
 
-    print("=" * 50)
-    print("DESKBOT EARS → BRAIN TEST")
-    print("=" * 50)
+    print("=" * 60)
+    print("DESKBOT FULL VOICE LOOP")
+    print("=" * 60)
     print()
     print("Speak normally.")
-    print("Speech → STT → LLM → response")
+    print()
+    print("MIC")
+    print(" ↓")
+    print("VAD")
+    print(" ↓")
+    print("Sarvam STT")
+    print(" ↓")
+    print("LLM")
+    print(" ↓")
+    print("Sarvam TTS")
+    print(" ↓")
+    print("🔊 boAt Speaker")
     print()
     print("Press Ctrl+C to stop.")
-    print()
+    print("=" * 60)
 
     pipeline.start()
 
