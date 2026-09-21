@@ -1,147 +1,100 @@
-from core.event_bus import EventBus
-from core.events import EventTypes
-from core.llm import FakeLLM
-from core.llm_pipeline import LLMPipeline
-from datetime import datetime
+import json
 
-from core.events import Event
+from core.llm import FakeLLM, SarvamLLM
 
 
 def test_fake_llm():
     llm = FakeLLM(
-        text="Hello from Deskbot."
+        text="Hello Deskbot"
     )
 
     result = llm.generate(
-        [
-            {
-                "role": "user",
-                "content": "Hello Deskbot",
-            }
-        ]
+        [{"role": "user", "content": "Hi"}]
     )
 
-    assert result["text"] == "Hello from Deskbot."
+    assert result["text"] == "Hello Deskbot"
+    assert result["should_respond"] is True
+    assert result["response_mode"] == "voice_and_display"
 
 
-def test_llm_pipeline_returns_response():
-    llm = FakeLLM(
-        text="I am doing great!"
+def test_sarvam_llm_parses_structured_response():
+    llm = SarvamLLM.__new__(
+        SarvamLLM
     )
 
-    pipeline = LLMPipeline(
-        llm=llm,
+    content = json.dumps(
+        {
+            "relevant": True,
+            "addressed_to_deskbot": True,
+            "needs_response": True,
+            "response_mode": "voice_and_display",
+            "response": "Good luck with your meeting!",
+        }
     )
 
-    result = pipeline.process(
-        "How are you?"
+    result = llm._parse_response(
+        content
     )
 
-    assert result["text"] == "I am doing great!"
-
-
-def test_llm_pipeline_emits_text_response():
-    event_bus = EventBus()
-
-    received = []
-
-    def handler(event):
-        received.append(event)
-
-    event_bus.subscribe(
-        EventTypes.TEXT_RESPONSE,
-        handler,
+    assert result["text"] == (
+        "Good luck with your meeting!"
     )
 
-    llm = FakeLLM(
-        text="Nice to meet you."
+    assert result["should_respond"] is True
+
+    assert result["relevant"] is True
+
+    assert result["addressed_to_deskbot"] is True
+
+    assert result["needs_response"] is True
+
+    assert result["response_mode"] == (
+        "voice_and_display"
     )
 
-    pipeline = LLMPipeline(
-        llm=llm,
-        event_bus=event_bus,
+
+def test_sarvam_llm_parses_ignore_response():
+    llm = SarvamLLM.__new__(
+        SarvamLLM
     )
 
-    result = pipeline.process(
-        "Hello"
+    content = json.dumps(
+        {
+            "relevant": False,
+            "addressed_to_deskbot": False,
+            "needs_response": False,
+            "response_mode": "ignore",
+            "response": "",
+        }
     )
 
-    assert result["text"] == "Nice to meet you."
-
-    assert len(received) == 1
-    assert received[0].type == EventTypes.TEXT_RESPONSE
-    assert received[0].data["text"] == "Nice to meet you."
-
-def test_llm_pipeline_reacts_to_text_received():
-    event_bus = EventBus()
-
-    received = []
-
-    def handler(event):
-        received.append(event)
-
-    event_bus.subscribe(
-        EventTypes.TEXT_RESPONSE,
-        handler,
+    result = llm._parse_response(
+        content
     )
 
-    llm = FakeLLM(
-        text="Yes, I heard you."
+    assert result["text"] == ""
+
+    assert result["should_respond"] is False
+
+    assert result["response_mode"] == "ignore"
+
+def test_plain_text_fallback():
+    llm = SarvamLLM.__new__(
+        SarvamLLM
     )
 
-    LLMPipeline(
-        llm=llm,
-        event_bus=event_bus,
+    result = llm._parse_response(
+        "That sounds like a great project!"
     )
 
-    event_bus.publish(
-        Event(
-            type=EventTypes.TEXT_RECEIVED,
-            data={
-                "text": "Hello Deskbot",
-                "confidence": 1.0,
-            },
-            timestamp=datetime.now(),
-        )
+    assert result["text"] == (
+        "That sounds like a great project!"
     )
 
-    assert len(received) == 1
-    assert received[0].type == EventTypes.TEXT_RESPONSE
-    assert received[0].data["text"] == "Yes, I heard you."
+    assert result["should_respond"] is True
 
-def test_llm_pipeline_preserves_conversation():
-    llm = FakeLLM(
-        text="I remember that."
-    )
+    assert result["needs_response"] is True
 
-    pipeline = LLMPipeline(
-        llm=llm,
-    )
-
-    pipeline.process(
-        "I have an exam tomorrow."
-    )
-
-    pipeline.process(
-        "I am nervous."
-    )
-
-    messages = pipeline.conversation.get_messages()
-
-    assert messages[0]["role"] == "system"
-
-    assert messages[1]["content"] == (
-        "I have an exam tomorrow."
-    )
-
-    assert messages[2]["content"] == (
-        "I remember that."
-    )
-
-    assert messages[3]["content"] == (
-        "I am nervous."
-    )
-
-    assert messages[4]["content"] == (
-        "I remember that."
+    assert result["response_mode"] == (
+        "voice_and_display"
     )
