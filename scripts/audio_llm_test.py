@@ -5,10 +5,13 @@ from dotenv import load_dotenv
 from core.audio import PipeWireAudioInput
 from core.audio_output import PipeWireAudioOutput
 from core.audio_pipeline import AudioPipeline
+from core.browser_display import BrowserDisplay
+from core.display_controller import DisplayController
 from core.event_bus import EventBus
 from core.events import EventTypes
 from core.llm import SarvamLLM
 from core.llm_pipeline import LLMPipeline
+from core.state import StateController
 from core.tts import SarvamTextToSpeech
 from core.tts_pipeline import TTSPipeline
 from core.voice import SarvamSpeechToText
@@ -19,12 +22,36 @@ load_dotenv()
 
 
 def main():
-    api_key = os.getenv("SARVAM_API_KEY")
+    api_key = os.getenv(
+        "SARVAM_API_KEY"
+    )
 
     if not api_key:
-        raise RuntimeError("SARVAM_API_KEY is not set")
+        raise RuntimeError(
+            "SARVAM_API_KEY is not set"
+        )
 
     event_bus = EventBus()
+
+    # -------------------------
+    # DISPLAY
+    # -------------------------
+
+    browser_display = BrowserDisplay(
+        host="0.0.0.0",
+        port=8080,
+    )
+
+    browser_display.start()
+
+    display_controller = DisplayController(
+        browser_display
+    )
+
+    StateController(
+        event_bus=event_bus,
+        display_controller=display_controller,
+    )
 
     # -------------------------
     # STT
@@ -83,7 +110,9 @@ def main():
         speech_sample_rate=24000,
     )
 
-    audio_output = PipeWireAudioOutput()
+    audio_output = PipeWireAudioOutput(
+        event_bus=event_bus,
+    )
 
     TTSPipeline(
         tts=tts,
@@ -96,18 +125,34 @@ def main():
     # -------------------------
 
     def handle_speech_started(event):
-        print("\n🎤 SPEECH STARTED")
+        print(
+            "\n🎤 SPEECH STARTED"
+        )
 
     def handle_speech_ended(event):
-        segment = event.data["segment"]
+        segment = event.data[
+            "segment"
+        ]
 
-        print("\n🛑 SPEECH ENDED")
-        print("Sending audio to Sarvam STT...")
+        print(
+            "\n🛑 SPEECH ENDED"
+        )
 
-        result = voice_pipeline.process(segment)
+        print(
+            "Sending audio to Sarvam STT..."
+        )
 
-        print("\n🧠 TRANSCRIPT:")
-        print(result["transcription"]["text"])
+        result = voice_pipeline.process(
+            segment
+        )
+
+        print(
+            "\n🧠 TRANSCRIPT:"
+        )
+
+        print(
+            result["transcription"]["text"]
+        )
 
     def handle_text(event):
         print(
@@ -120,7 +165,20 @@ def main():
             "\n🤖 DESKBOT:",
             event.data["text"],
         )
-        print("🔊 Sending response to TTS...")
+
+        print(
+            "🔊 Sending response to TTS..."
+        )
+
+    def handle_speaking_started(event):
+        print(
+            "\n🔊 SPEAKING STARTED"
+        )
+
+    def handle_speaking_ended(event):
+        print(
+            "\n🔇 SPEAKING ENDED"
+        )
 
     event_bus.subscribe(
         EventTypes.SPEECH_STARTED,
@@ -142,13 +200,19 @@ def main():
         handle_response,
     )
 
-    # -------------------------
-    # Audio
-    # -------------------------
+    event_bus.subscribe(
+        EventTypes.SPEAKING_STARTED,
+        handle_speaking_started,
+    )
 
-    # IMPORTANT:
-    # 89 is the known PipeWire source for
-    # the boAt Stone 350 Pro Plus microphone.
+    event_bus.subscribe(
+        EventTypes.SPEAKING_ENDED,
+        handle_speaking_ended,
+    )
+
+    # -------------------------
+    # AUDIO INPUT
+    # -------------------------
 
     audio = PipeWireAudioInput(
         target=89,
@@ -162,26 +226,95 @@ def main():
         event_bus=event_bus,
     )
 
-    print("=" * 60)
-    print("DESKBOT FULL VOICE LOOP")
-    print("=" * 60)
+    # -------------------------
+    # START
+    # -------------------------
+
+    print(
+        "=" * 60
+    )
+
+    print(
+        "DESKBOT EMBODIED VOICE LOOP"
+    )
+
+    print(
+        "=" * 60
+    )
+
     print()
-    print("Speak normally.")
+
+    print(
+        "Browser:"
+    )
+
+    print(
+        "http://192.168.1.33:8080"
+    )
+
     print()
-    print("MIC")
-    print(" ↓")
-    print("VAD")
-    print(" ↓")
-    print("Sarvam STT")
-    print(" ↓")
-    print("LLM")
-    print(" ↓")
-    print("Sarvam TTS")
-    print(" ↓")
-    print("🔊 boAt Speaker")
+
+    print(
+        "MIC"
+    )
+
+    print(
+        " ↓"
+    )
+
+    print(
+        "VAD"
+    )
+
+    print(
+        " ↓"
+    )
+
+    print(
+        "Sarvam STT"
+    )
+
+    print(
+        " ↓"
+    )
+
+    print(
+        "Input Gate"
+    )
+
+    print(
+        " ↓"
+    )
+
+    print(
+        "105B"
+    )
+
+    print(
+        " ↓"
+    )
+
+    print(
+        "Sarvam TTS"
+    )
+
+    print(
+        " ↓"
+    )
+
+    print(
+        "🔊 boAt Speaker"
+    )
+
     print()
-    print("Press Ctrl+C to stop.")
-    print("=" * 60)
+
+    print(
+        "Press Ctrl+C to stop."
+    )
+
+    print(
+        "=" * 60
+    )
 
     pipeline.start()
 
@@ -190,10 +323,13 @@ def main():
             pipeline.process_once()
 
     except KeyboardInterrupt:
-        print("\nStopping...")
+        print(
+            "\nStopping..."
+        )
 
     finally:
         pipeline.stop()
+        browser_display.stop()
 
 
 if __name__ == "__main__":
