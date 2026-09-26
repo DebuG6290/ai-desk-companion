@@ -61,9 +61,13 @@ class FakeDisplay:
         self.started = False
         self.stopped = False
         self.debug_tracker = None
+        self.camera_images = []
 
     def attach_debug_tracker(self, tracker):
         self.debug_tracker = tracker
+
+    def update_camera_image(self, image_bytes):
+        self.camera_images.append(image_bytes)
 
     def start(self):
         self.started = True
@@ -107,6 +111,8 @@ def test_runtime_processes_camera_and_audio():
     assert runtime.camera.frames == 1
     assert runtime.identity_presence.calls == 1
     assert runtime.audio_pipeline.calls == 1
+    assert len(runtime.browser_display.camera_images) == 1
+    assert runtime.browser_display.camera_images[0]
 
     runtime.stop()
 
