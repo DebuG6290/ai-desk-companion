@@ -93,3 +93,21 @@ class FaceDetector:
             )
 
         return detections
+
+
+class Perception:
+    """
+    Combined perception facade used by the integrated runtime.
+
+    It keeps person and face detection as separate capabilities while
+    exposing one stable detect(frame) interface to the runtime.
+    """
+
+    def __init__(self, person_detector=None, face_detector=None):
+        self.person_detector = person_detector or PersonDetector()
+        self.face_detector = face_detector or FaceDetector()
+
+    def detect(self, frame):
+        people = self.person_detector.detect(frame)
+        faces = self.face_detector.detect(frame)
+        return people, faces
