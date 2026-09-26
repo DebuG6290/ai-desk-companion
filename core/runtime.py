@@ -60,6 +60,7 @@ class DeskbotRuntime:
         self.debug_tracker.record_event(event_type, event.data)
 
         if event_type == "ACTION_REQUESTED":
+            self.debug_tracker.update_decision(event.data)
             self.debug_tracker.update_action(event.data)
 
     def start(self):
@@ -111,6 +112,25 @@ class DeskbotRuntime:
                     (x + w, y + h),
                     (255, 255, 255),
                     2,
+                )
+
+            identity = result.get("identity", "UNKNOWN")
+            distance = result.get("distance")
+            label = identity
+            if distance is not None:
+                label = f"{identity} | distance {distance:.1f}"
+
+            if faces:
+                x, y = faces[0]["x"], faces[0]["y"]
+                cv2.putText(
+                    debug_frame,
+                    label,
+                    (x, max(25, y - 10)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.65,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
                 )
 
             ok, encoded = cv2.imencode(".jpg", debug_frame)
