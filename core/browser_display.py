@@ -157,7 +157,7 @@ html,body{margin:0;width:100%;height:100%;background:#080808;color:#fff;font-fam
 <div id="left">
   <div class="card" style="width:100%;max-width:640px">
     <div class="title">LIVE CAMERA</div>
-    <img id="camera" src="/camera.jpg" alt="camera">
+    <img id="camera" alt="camera">
   </div>
   <div class="card" id="facePanel">
     <div>
@@ -179,9 +179,10 @@ html,body{margin:0;width:100%;height:100%;background:#080808;color:#fff;font-fam
 </div>
 <script>
 function row(k,v){return '<div class="row"><span class="label">'+k+'</span><span class="value">'+(v ?? '-')+'</span></div>'}
+
 async function refresh(){
  try{
-  const d=await (await fetch('/debug?x='+Date.now())).json();
+  const d=await (await fetch('/debug?x='+Date.now(), {cache:'no-store'})).json();
   const w=d.world||{};
   document.getElementById('world').innerHTML=
     row('STATE',d.state?.toUpperCase())+
@@ -199,11 +200,35 @@ async function refresh(){
   document.getElementById('facePanel').querySelector('.face').className='face '+state;
  }catch(e){}
 }
-setInterval(()=>{document.getElementById('camera').src='/camera.jpg?x='+Date.now()},250);
+
+const camera=document.getElementById('camera');
+let cameraLoading=false;
+
+function loadCameraFrame(){
+ if(cameraLoading) return;
+ cameraLoading=true;
+
+ const next=new Image();
+ const url='/camera.jpg?x='+Date.now();
+
+ next.onload=()=>{
+   camera.src=next.src;
+   cameraLoading=false;
+   setTimeout(loadCameraFrame, 100);
+ };
+
+ next.onerror=()=>{
+   cameraLoading=false;
+   setTimeout(loadCameraFrame, 250);
+ };
+
+ next.src=url;
+}
+
+loadCameraFrame();
 setInterval(refresh,250);
 refresh();
 </script>
 </body>
 </html>
 '''
-
