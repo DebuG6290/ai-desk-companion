@@ -202,27 +202,31 @@ async function refresh(){
 }
 
 const camera=document.getElementById('camera');
-let cameraLoading=false;
+let previousObjectUrl=null;
 
-function loadCameraFrame(){
- if(cameraLoading) return;
- cameraLoading=true;
+async function loadCameraFrame(){
+ try{
+   const response=await fetch('/camera.jpg?x='+Date.now(), {cache:'no-store'});
+   if(!response.ok) throw new Error('camera HTTP '+response.status);
 
- const next=new Image();
- const url='/camera.jpg?x='+Date.now();
+   const blob=await response.blob();
+   const objectUrl=URL.createObjectURL(blob);
 
- next.onload=()=>{
-   camera.src=next.src;
-   cameraLoading=false;
-   setTimeout(loadCameraFrame, 100);
- };
+   camera.onload=()=>{
+     if(previousObjectUrl) URL.revokeObjectURL(previousObjectUrl);
+     previousObjectUrl=objectUrl;
+     setTimeout(loadCameraFrame, 100);
+   };
 
- next.onerror=()=>{
-   cameraLoading=false;
+   camera.onerror=()=>{
+     URL.revokeObjectURL(objectUrl);
+     setTimeout(loadCameraFrame, 250);
+   };
+
+   camera.src=objectUrl;
+ }catch(e){
    setTimeout(loadCameraFrame, 250);
- };
-
- next.src=url;
+ }
 }
 
 loadCameraFrame();
