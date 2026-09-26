@@ -27,6 +27,8 @@ class EventTypes:
 
     TAP_DETECTED = "TAP_DETECTED"
 
+    ACTION_REQUESTED = "ACTION_REQUESTED"
+
 
 @dataclass
 class Event:
