@@ -60,6 +60,10 @@ class FakeDisplay:
     def __init__(self):
         self.started = False
         self.stopped = False
+        self.debug_tracker = None
+
+    def attach_debug_tracker(self, tracker):
+        self.debug_tracker = tracker
 
     def start(self):
         self.started = True
@@ -89,6 +93,7 @@ def test_runtime_start_starts_components():
     assert runtime.camera.started is True
     assert runtime.audio_pipeline.started is True
     assert runtime.browser_display.started is True
+    assert runtime.browser_display.debug_tracker is runtime.debug_tracker
 
     runtime.stop()
 
