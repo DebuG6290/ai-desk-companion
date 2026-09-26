@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from core.event_bus import EventBus
 from core.runtime import DeskbotRuntime
 
 
@@ -73,7 +74,7 @@ def build_runtime():
         perception=FakePerception(),
         identity_presence=FakeIdentityPresence(),
         audio_pipeline=FakeAudioPipeline(),
-        event_bus=object(),
+        event_bus=EventBus(),
         browser_display=FakeDisplay(),
         camera_interval=0.0,
     )
